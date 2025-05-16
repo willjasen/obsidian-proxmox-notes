@@ -25,6 +25,20 @@ export default class ProxmoxPlugin extends Plugin {
     // Initialize ProxmoxClient
     this.proxmoxClient = new ProxmoxClient(this.settings.baseUrl, this.settings.apiToken);
 
+    // Automatically generate notes for VMs and LXCs on startup
+    const vaultRoot = (this.app.vault.adapter as any).getBasePath();
+    let notesDir = this.settings.notesDirectory?.trim() || '';
+    let targetDir = notesDir ? require('path').join(vaultRoot, notesDir) : vaultRoot;
+    new Notice('Generating Proxmox VM and LXC notes...');
+    try {
+      await this.proxmoxClient.createNotesForVMs(targetDir);
+      await this.proxmoxClient.createNotesForLXCs(targetDir);
+      new Notice('Proxmox VM and LXC notes created!');
+    } catch (err) {
+      console.error('Failed to create Proxmox notes:', err);
+      new Notice('Failed to create Proxmox notes. See console for details.');
+    }
+
     // Add command to generate VM notes
     this.addCommand({
       id: 'generate-proxmox-vm-notes',

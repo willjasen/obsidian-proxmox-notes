@@ -106,6 +106,7 @@ export class ProxmoxClient {
       const vms = await this.getVMs();
       console.log(`Found ${vms.length} VMs.`);
       for (const vm of vms) {
+        if (vm.type !== 'qemu') continue; // Only process VMs
         console.log(`Creating note for VMID: ${vm.vmid}, Name: ${vm.name || ''}`);
         let proxmoxNote = '';
         if (vm.node && vm.vmid) {
@@ -141,5 +142,80 @@ export class ProxmoxClient {
     } catch (err) {
       console.error('Error creating VM notes:', err);
     }
+  }
+
+  async createNotesForLXCs(vaultRoot: string): Promise<void> {
+    console.log('Starting createNotesForLXCs...');
+    try {
+      const lxcs = await this.getVMs();
+      for (const lxc of lxcs) {
+        if (lxc.type !== 'lxc') continue; // Only process LXCs
+        console.log(`Creating note for LXC VMID: ${lxc.vmid}, Name: ${lxc.name || ''}`);
+        let proxmoxNote = '';
+        if (lxc.node && lxc.vmid) {
+          proxmoxNote = await this.getProxmoxLXCNotes(lxc.node, lxc.vmid);
+        }
+        // Handle YAML front matter
+        let frontMatter = `---\nProxmox ID: ${lxc.vmid}\n---`;
+        let content = proxmoxNote;
+        const frontMatterRegex = /^---\n([\s\S]*?)\n---\n?/;
+        const match = proxmoxNote.match(frontMatterRegex);
+        if (match) {
+          let fm = match[1]
+            .split(/\r?\n/)
+            .filter(line => !/^Proxmox ID:/m.test(line))
+            .join('\n');
+          if (fm.trim().length > 0) {
+            fm += `\nProxmox ID: ${lxc.vmid}`;
+          } else {
+            fm = `Proxmox ID: ${lxc.vmid}`;
+          }
+          frontMatter = `---\n${fm}\n---`;
+          content = proxmoxNote.replace(frontMatterRegex, '').trimStart();
+        }
+        const noteContent = `${frontMatter}\n\n${content}`.trim();
+        const fileName = `LXC ${lxc.vmid} -- ${(lxc.name || '').replace(/[^a-zA-Z0-9-_]/g, '_')}.md`;
+        const filePath = path.join(vaultRoot, fileName);
+        await fs.writeFile(filePath, noteContent, 'utf8');
+        console.log(`Created note: ${filePath}`);
+      }
+      console.log('All LXC notes created.');
+    } catch (err) {
+      console.error('Error creating LXC notes:', err);
+    }
+  }
+
+  // Fetch the Proxmox 'notes' (description) for a given LXC
+  async getProxmoxLXCNotes(node: string, vmid: string): Promise<string> {
+    const url = `${this.baseUrl}/api2/json/nodes/${node}/lxc/${vmid}/config`;
+    return new Promise((resolve, reject) => {
+      const options = {
+        method: 'GET',
+        headers: {
+          'Authorization': `PVEAPIToken=${this.apiToken}`,
+          'Accept': 'application/json',
+        },
+      };
+      const req = https.request(url, options, (res: IncomingMessage) => {
+        let data = '';
+        res.on('data', (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              const parsedData = JSON.parse(data);
+              resolve(parsedData.data?.description || '');
+            } catch (error) {
+              resolve('');
+            }
+          } else {
+            resolve('');
+          }
+        });
+      });
+      req.on('error', () => resolve(''));
+      req.end();
+    });
   }
 }
