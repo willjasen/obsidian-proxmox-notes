@@ -1,5 +1,5 @@
 // src/main.ts
-import { Plugin } from 'obsidian';
+import { Plugin, Notice } from 'obsidian';
 import { ProxmoxSettingTab, DEFAULT_SETTINGS, ProxmoxPluginSettings } from './settings';
 import { ProxmoxView, VIEW_TYPE_PROXMOX } from './src/view';
 import { ProxmoxClient } from './src/ProxmoxClient';
@@ -24,6 +24,25 @@ export default class ProxmoxPlugin extends Plugin {
 
     // Initialize ProxmoxClient
     this.proxmoxClient = new ProxmoxClient(this.settings.baseUrl, this.settings.apiToken);
+
+    // Add command to generate VM notes
+    this.addCommand({
+      id: 'generate-proxmox-vm-notes',
+      name: 'Generate Proxmox VM Notes',
+      callback: async () => {
+        const vaultRoot = (this.app.vault.adapter as any).getBasePath();
+        let notesDir = this.settings.notesDirectory?.trim() || '';
+        let targetDir = notesDir ? require('path').join(vaultRoot, notesDir) : vaultRoot;
+        new Notice('Generating Proxmox VM notes...');
+        try {
+          await this.proxmoxClient.createNotesForVMs(targetDir);
+          new Notice('Proxmox VM notes created!');
+        } catch (err) {
+          console.error('Failed to create Proxmox VM notes:', err);
+          new Notice('Failed to create Proxmox VM notes. See console for details.');
+        }
+      },
+    });
   }
 
   onunload() {
