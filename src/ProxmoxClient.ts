@@ -66,6 +66,40 @@ export class ProxmoxClient {
     });
   }
 
+  // Fetch the Proxmox 'notes' (description) for a given VM
+  async getProxmoxVMNotes(node: string, vmid: string): Promise<string> {
+    const url = `${this.baseUrl}/api2/json/nodes/${node}/qemu/${vmid}/config`;
+    return new Promise((resolve, reject) => {
+      const options = {
+        method: 'GET',
+        headers: {
+          'Authorization': `PVEAPIToken=${this.apiToken}`,
+          'Accept': 'application/json',
+        },
+      };
+      const req = https.request(url, options, (res: IncomingMessage) => {
+        let data = '';
+        res.on('data', (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              const parsedData = JSON.parse(data);
+              resolve(parsedData.data?.description || '');
+            } catch (error) {
+              resolve(''); // If parsing fails, just return empty string
+            }
+          } else {
+            resolve(''); // If request fails, just return empty string
+          }
+        });
+      });
+      req.on('error', () => resolve(''));
+      req.end();
+    });
+  }
+
   async createNotesForVMs(vaultRoot: string): Promise<void> {
     console.log('Starting createNotesForVMs...');
     try {
@@ -73,7 +107,31 @@ export class ProxmoxClient {
       console.log(`Found ${vms.length} VMs.`);
       for (const vm of vms) {
         console.log(`Creating note for VMID: ${vm.vmid}, Name: ${vm.name || ''}`);
-        const noteContent = `# VM: ${vm.name || vm.vmid}\n\n- **VMID:** ${vm.vmid}\n- **Name:** ${vm.name || ''}\n- **Status:** ${vm.status}\n- **Node:** ${vm.node}\n- **Type:** ${vm.type}\n- **Max Memory:** ${vm.maxmem}\n- **Max Disk:** ${vm.maxdisk}\n- **CPUs:** ${vm.cpus}\n`;
+        let proxmoxNote = '';
+        if (vm.node && vm.vmid) {
+          proxmoxNote = await this.getProxmoxVMNotes(vm.node, vm.vmid);
+        }
+
+        // Handle YAML front matter
+        let frontMatter = `---\nProxmox ID: ${vm.vmid}\n---`;
+        let content = proxmoxNote;
+        const frontMatterRegex = /^---\n([\s\S]*?)\n---\n?/;
+        const match = proxmoxNote.match(frontMatterRegex);
+        if (match) {
+          // Existing front matter: update or add Proxmox ID at the end
+          let fm = match[1]
+            .split(/\r?\n/)
+            .filter(line => !/^Proxmox ID:/m.test(line)) // Remove any existing Proxmox ID
+            .join('\n');
+          if (fm.trim().length > 0) {
+            fm += `\nProxmox ID: ${vm.vmid}`;
+          } else {
+            fm = `Proxmox ID: ${vm.vmid}`;
+          }
+          frontMatter = `---\n${fm}\n---`;
+          content = proxmoxNote.replace(frontMatterRegex, '').trimStart();
+        }
+        const noteContent = `${frontMatter}\n\n${content}`.trim();
         const fileName = `VM ${vm.vmid} -- ${(vm.name || '').replace(/[^a-zA-Z0-9-_]/g, '_')}.md`;
         const filePath = path.join(vaultRoot, fileName);
         await fs.writeFile(filePath, noteContent, 'utf8');
