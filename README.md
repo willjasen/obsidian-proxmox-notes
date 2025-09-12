@@ -45,9 +45,6 @@ Pull requests and issues are welcome! Please open an issue for bugs or feature r
 ## License
 GPLv3
 
-## Credits
-Author: [willjasen](https://github.com/willjasen)
-
 ---
 
 ## Troubleshooting
