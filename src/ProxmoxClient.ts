@@ -197,7 +197,7 @@ export class ProxmoxClient {
     console.log('Starting createNotesForLXCs...');
     try {
       const lxcs = await this.getVMs();
-      const lxcFolder = path.join(vaultRoot, 'LXCs');
+      const lxcFolder = path.join(vaultRoot, 'CTs');
       await fs.mkdir(lxcFolder, { recursive: true });
       for (const lxc of lxcs) {
         if (lxc.type !== 'lxc') continue; // Only process LXCs
