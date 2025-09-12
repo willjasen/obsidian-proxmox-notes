@@ -6,5 +6,5 @@
 	"description": "Integrate Proxmox VM and container notes within Obsidian",
 	"author": "willjasen",
 	"authorUrl": "https://willjasen.com",
-	"isDesktopOnly": false
+	"isDesktopOnly": true
   }
