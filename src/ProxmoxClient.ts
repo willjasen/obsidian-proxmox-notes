@@ -115,15 +115,15 @@ export class ProxmoxClient {
   }
 
   async createNotesForVMs(vaultRoot: string): Promise<void> {
-    console.log('Starting createNotesForVMs...');
+    // console.log('Starting createNotesForVMs...');
     try {
       const vms = await this.getVMs();
-      console.log(`Found ${vms.length} VMs.`);
+      // console.log(`Found ${vms.length} VMs.`);
       const vmsFolder = path.join(vaultRoot, 'VMs');
       await fs.mkdir(vmsFolder, { recursive: true });
       for (const vm of vms) {
         if (vm.type !== 'qemu') continue; // Only process VMs
-        console.log(`Creating note for VMID: ${vm.vmid}, Name: ${vm.name || ''}`);
+        // console.log(`Creating note for VMID: ${vm.vmid}, Name: ${vm.name || ''}`);
         let proxmoxNote = '';
         if (vm.node && vm.vmid) {
           proxmoxNote = await this.getProxmoxVMNotes(vm.node, vm.vmid);
@@ -172,10 +172,10 @@ export class ProxmoxClient {
             }
             if (needsUpdate) {
               shouldWrite = true;
-              console.log(`Updating frontmatter for note: ${filePath}`);
+              // console.log(`Updating frontmatter for note: ${filePath}`);
             } else {
               shouldWrite = false;
-              console.log(`No changes for note: ${filePath}`);
+              // console.log(`No changes for note: ${filePath}`);
             }
           }
         } catch (err) {
@@ -184,24 +184,24 @@ export class ProxmoxClient {
         }
         if (shouldWrite) {
           await fs.writeFile(filePath, noteContent, 'utf8');
-          console.log(`Created/Updated note: ${filePath}`);
+          // console.log(`Created/Updated note: ${filePath}`);
         }
       }
-      console.log('All VM notes created.');
+      // console.log('All VM notes created.');
     } catch (err) {
       console.error('Error creating VM notes:', err);
     }
   }
 
   async createNotesForLXCs(vaultRoot: string): Promise<void> {
-    console.log('Starting createNotesForLXCs...');
+    // console.log('Starting createNotesForLXCs...');
     try {
       const lxcs = await this.getVMs();
       const lxcFolder = path.join(vaultRoot, 'CTs');
       await fs.mkdir(lxcFolder, { recursive: true });
       for (const lxc of lxcs) {
         if (lxc.type !== 'lxc') continue; // Only process LXCs
-        console.log(`Creating note for LXC ID: ${lxc.vmid}, Name: ${lxc.name || ''}`);
+        // // console.log(`Creating note for LXC ID: ${lxc.vmid}, Name: ${lxc.name || ''}`);
         let proxmoxNote = '';
         if (lxc.node && lxc.vmid) {
           proxmoxNote = await this.getProxmoxLXCNotes(lxc.node, lxc.vmid);
@@ -248,10 +248,10 @@ export class ProxmoxClient {
             }
             if (needsUpdate) {
               shouldWrite = true;
-              console.log(`Updating frontmatter for note: ${filePath}`);
+              // console.log(`Updating frontmatter for note: ${filePath}`);
             } else {
               shouldWrite = false;
-              console.log(`No changes for note: ${filePath}`);
+              // console.log(`No changes for note: ${filePath}`);
             }
           }
         } catch (err) {
@@ -260,10 +260,10 @@ export class ProxmoxClient {
         }
         if (shouldWrite) {
           await fs.writeFile(filePath, noteContent, 'utf8');
-          console.log(`Created/Updated note: ${filePath}`);
+          // console.log(`Created/Updated note: ${filePath}`);
         }
       }
-      console.log('All LXC notes created.');
+      // console.log('All LXC notes created.');
     } catch (err) {
       console.error('Error creating LXC notes:', err);
     }
