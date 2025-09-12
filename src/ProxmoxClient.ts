@@ -130,20 +130,20 @@ export class ProxmoxClient {
         }
 
         // Handle YAML front matter
-        let frontMatter = `---\nProxmox ID: ${vm.vmid}\n---`;
+  let frontMatter = `---\nProxmox ID: ${vm.vmid}\nProxmox Type: VM\n---`;
         let content = proxmoxNote;
         const frontMatterRegex = /^---\n([\s\S]*?)\n---\n?/;
         const match = proxmoxNote.match(frontMatterRegex);
         if (match) {
-          // Existing front matter: update or add Proxmox ID at the end
+          // Existing front matter: update or add Proxmox ID and Type at the end
           let fm = match[1]
             .split(/\r?\n/)
-            .filter(line => !/^Proxmox ID:/m.test(line)) // Remove any existing Proxmox ID
+            .filter(line => !/^Proxmox ID:/m.test(line) && !/^Proxmox Type:/m.test(line)) // Remove any existing Proxmox ID and Type
             .join('\n');
           if (fm.trim().length > 0) {
-            fm += `\nProxmox ID: ${vm.vmid}`;
+            fm += `\nProxmox ID: ${vm.vmid}\nProxmox Type: VM`;
           } else {
-            fm = `Proxmox ID: ${vm.vmid}`;
+            fm = `Proxmox ID: ${vm.vmid}\nProxmox Type: VM`;
           }
           frontMatter = `---\n${fm}\n---`;
           content = proxmoxNote.replace(frontMatterRegex, '').trimStart();
@@ -158,8 +158,25 @@ export class ProxmoxClient {
           const existingBody = this.stripFrontMatter(existingContent);
           const newBody = this.stripFrontMatter(noteContent);
           if (this.normalizeNoteContent(existingBody) === this.normalizeNoteContent(newBody)) {
-            shouldWrite = false;
-            console.log(`No changes for note: ${filePath}`);
+            // Check if frontmatter is missing Proxmox ID or Type
+            const fmRegex = /^---\n([\s\S]*?)\n---/;
+            const fmMatch = existingContent.match(fmRegex);
+            let needsUpdate = false;
+            if (fmMatch) {
+              const fm = fmMatch[1];
+              if (!/^Proxmox ID:/m.test(fm) || !/^Proxmox Type:/m.test(fm)) {
+                needsUpdate = true;
+              }
+            } else {
+              needsUpdate = true;
+            }
+            if (needsUpdate) {
+              shouldWrite = true;
+              console.log(`Updating frontmatter for note: ${filePath}`);
+            } else {
+              shouldWrite = false;
+              console.log(`No changes for note: ${filePath}`);
+            }
           }
         } catch (err) {
           // File does not exist, so we should write it
@@ -190,19 +207,19 @@ export class ProxmoxClient {
           proxmoxNote = await this.getProxmoxLXCNotes(lxc.node, lxc.vmid);
         }
         // Handle YAML front matter
-        let frontMatter = `---\nProxmox ID: ${lxc.vmid}\n---`;
+  let frontMatter = `---\nProxmox ID: ${lxc.vmid}\nProxmox Type: CT\n---`;
         let content = proxmoxNote;
         const frontMatterRegex = /^---\n([\s\S]*?)\n---\n?/;
         const match = proxmoxNote.match(frontMatterRegex);
         if (match) {
           let fm = match[1]
             .split(/\r?\n/)
-            .filter(line => !/^Proxmox ID:/m.test(line))
+            .filter(line => !/^Proxmox ID:/m.test(line) && !/^Proxmox Type:/m.test(line))
             .join('\n');
           if (fm.trim().length > 0) {
-            fm += `\nProxmox ID: ${lxc.vmid}`;
+            fm += `\nProxmox ID: ${lxc.vmid}\nProxmox Type: CT`;
           } else {
-            fm = `Proxmox ID: ${lxc.vmid}`;
+            fm = `Proxmox ID: ${lxc.vmid}\nProxmox Type: CT`;
           }
           frontMatter = `---\n${fm}\n---`;
           content = proxmoxNote.replace(frontMatterRegex, '').trimStart();
@@ -217,8 +234,25 @@ export class ProxmoxClient {
           const existingBody = this.stripFrontMatter(existingContent);
           const newBody = this.stripFrontMatter(noteContent);
           if (this.normalizeNoteContent(existingBody) === this.normalizeNoteContent(newBody)) {
-            shouldWrite = false;
-            console.log(`No changes for note: ${filePath}`);
+            // Check if frontmatter is missing Proxmox ID or Type
+            const fmRegex = /^---\n([\s\S]*?)\n---/;
+            const fmMatch = existingContent.match(fmRegex);
+            let needsUpdate = false;
+            if (fmMatch) {
+              const fm = fmMatch[1];
+              if (!/^Proxmox ID:/m.test(fm) || !/^Proxmox Type:/m.test(fm)) {
+                needsUpdate = true;
+              }
+            } else {
+              needsUpdate = true;
+            }
+            if (needsUpdate) {
+              shouldWrite = true;
+              console.log(`Updating frontmatter for note: ${filePath}`);
+            } else {
+              shouldWrite = false;
+              console.log(`No changes for note: ${filePath}`);
+            }
           }
         } catch (err) {
           // File does not exist, so we should write it
