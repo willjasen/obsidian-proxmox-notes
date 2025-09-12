@@ -51,8 +51,8 @@ export class ProxmoxSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('VM Notes Directory')
-      .setDesc('Directory (relative to vault root) where VM notes will be created. Leave blank for root.')
+      .setName('Notes Directory')
+      .setDesc('Directory (relative to vault root) where notes will be created. Leave blank for root (/).')
       .addText(text => text
         .setPlaceholder('e.g. ProxmoxVMs')
         .setValue(this.plugin.settings.notesDirectory || '')
