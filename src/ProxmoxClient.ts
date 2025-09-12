@@ -5,6 +5,20 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 export class ProxmoxClient {
+  // Remove YAML frontmatter from note content
+  private stripFrontMatter(content: string): string {
+    return content.replace(/^---\n[\s\S]*?\n---\n?/, '').trimStart();
+  }
+  // Normalize note content for reliable comparison
+  private normalizeNoteContent(content: string): string {
+    return content
+      .replace(/\r\n/g, '\n') // Normalize line endings
+      .split('\n')
+      .map(line => line.trimEnd()) // Remove trailing spaces
+      .join('\n')
+      .replace(/\n+$/g, '') // Remove extra blank lines at end
+      .trim();
+  }
   private baseUrl: string;
   private apiToken: string;
 
@@ -137,8 +151,24 @@ export class ProxmoxClient {
         const noteContent = `${frontMatter}\n\n${content}`.trim();
         const fileName = `VM ${vm.vmid} -- ${(vm.name || '').replace(/[^a-zA-Z0-9-_]/g, '_')}.md`;
         const filePath = path.join(vmsFolder, fileName);
-        await fs.writeFile(filePath, noteContent, 'utf8');
-        console.log(`Created note: ${filePath}`);
+        let shouldWrite = true;
+        try {
+          const existingContent = await fs.readFile(filePath, 'utf8');
+          // Remove frontmatter from both existing and new content before comparing
+          const existingBody = this.stripFrontMatter(existingContent);
+          const newBody = this.stripFrontMatter(noteContent);
+          if (this.normalizeNoteContent(existingBody) === this.normalizeNoteContent(newBody)) {
+            shouldWrite = false;
+            console.log(`No changes for note: ${filePath}`);
+          }
+        } catch (err) {
+          // File does not exist, so we should write it
+          shouldWrite = true;
+        }
+        if (shouldWrite) {
+          await fs.writeFile(filePath, noteContent, 'utf8');
+          console.log(`Created/Updated note: ${filePath}`);
+        }
       }
       console.log('All VM notes created.');
     } catch (err) {
@@ -154,7 +184,7 @@ export class ProxmoxClient {
       await fs.mkdir(lxcFolder, { recursive: true });
       for (const lxc of lxcs) {
         if (lxc.type !== 'lxc') continue; // Only process LXCs
-        console.log(`Creating note for LXC VMID: ${lxc.vmid}, Name: ${lxc.name || ''}`);
+        console.log(`Creating note for LXC ID: ${lxc.vmid}, Name: ${lxc.name || ''}`);
         let proxmoxNote = '';
         if (lxc.node && lxc.vmid) {
           proxmoxNote = await this.getProxmoxLXCNotes(lxc.node, lxc.vmid);
@@ -180,8 +210,24 @@ export class ProxmoxClient {
         const noteContent = `${frontMatter}\n\n${content}`.trim();
         const fileName = `LXC ${lxc.vmid} -- ${(lxc.name || '').replace(/[^a-zA-Z0-9-_]/g, '_')}.md`;
         const filePath = path.join(lxcFolder, fileName);
-        await fs.writeFile(filePath, noteContent, 'utf8');
-        console.log(`Created note: ${filePath}`);
+        let shouldWrite = true;
+        try {
+          const existingContent = await fs.readFile(filePath, 'utf8');
+          // Remove frontmatter from both existing and new content before comparing
+          const existingBody = this.stripFrontMatter(existingContent);
+          const newBody = this.stripFrontMatter(noteContent);
+          if (this.normalizeNoteContent(existingBody) === this.normalizeNoteContent(newBody)) {
+            shouldWrite = false;
+            console.log(`No changes for note: ${filePath}`);
+          }
+        } catch (err) {
+          // File does not exist, so we should write it
+          shouldWrite = true;
+        }
+        if (shouldWrite) {
+          await fs.writeFile(filePath, noteContent, 'utf8');
+          console.log(`Created/Updated note: ${filePath}`);
+        }
       }
       console.log('All LXC notes created.');
     } catch (err) {
