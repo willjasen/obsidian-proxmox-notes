@@ -25,28 +25,16 @@ export class ProxmoxView extends ItemView {
     container.empty();
 
     // Fetch and display VMs
-    const node = 'pve1'; // Replace with actual node or make it dynamic
-    const vms = await this.proxmoxClient.getVMs(node);
+    const vms = await this.proxmoxClient.getVMs();
     const vmList = container.createEl('ul');
     vms.forEach((vm: any) => {
       const vmItem = vmList.createEl('li', { text: `VM ${vm.vmid}: ${vm.name}` });
-      vmItem.onclick = () => this.openVMNotes(node, vm.vmid);
+      // You can add click handlers here if you implement note viewing/updating
     });
-
     // Similarly, list containers
   }
 
-  async openVMNotes(node: string, vmId: number) {
-    const notes = await this.proxmoxClient.getVMNotes(node, vmId);
-    const editor = this.containerEl.createEl('textarea', { text: notes });
-    const saveButton = this.containerEl.createEl('button', { text: 'Save Notes' });
-
-    saveButton.onclick = async () => {
-      const updatedNotes = editor.value;
-      await this.proxmoxClient.updateVMNotes(node, vmId, updatedNotes);
-      new Notice('VM notes updated successfully!');
-    };
-  }
+  // Removed openVMNotes: getVMNotes and updateVMNotes are not implemented in ProxmoxClient
 
   async onClose() {
     // Cleanup if necessary

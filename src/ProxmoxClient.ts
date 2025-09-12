@@ -105,6 +105,8 @@ export class ProxmoxClient {
     try {
       const vms = await this.getVMs();
       console.log(`Found ${vms.length} VMs.`);
+      const vmsFolder = path.join(vaultRoot, 'VMs');
+      await fs.mkdir(vmsFolder, { recursive: true });
       for (const vm of vms) {
         if (vm.type !== 'qemu') continue; // Only process VMs
         console.log(`Creating note for VMID: ${vm.vmid}, Name: ${vm.name || ''}`);
@@ -134,7 +136,7 @@ export class ProxmoxClient {
         }
         const noteContent = `${frontMatter}\n\n${content}`.trim();
         const fileName = `VM ${vm.vmid} -- ${(vm.name || '').replace(/[^a-zA-Z0-9-_]/g, '_')}.md`;
-        const filePath = path.join(vaultRoot, fileName);
+        const filePath = path.join(vmsFolder, fileName);
         await fs.writeFile(filePath, noteContent, 'utf8');
         console.log(`Created note: ${filePath}`);
       }
@@ -148,6 +150,8 @@ export class ProxmoxClient {
     console.log('Starting createNotesForLXCs...');
     try {
       const lxcs = await this.getVMs();
+      const lxcFolder = path.join(vaultRoot, 'LXCs');
+      await fs.mkdir(lxcFolder, { recursive: true });
       for (const lxc of lxcs) {
         if (lxc.type !== 'lxc') continue; // Only process LXCs
         console.log(`Creating note for LXC VMID: ${lxc.vmid}, Name: ${lxc.name || ''}`);
@@ -175,7 +179,7 @@ export class ProxmoxClient {
         }
         const noteContent = `${frontMatter}\n\n${content}`.trim();
         const fileName = `LXC ${lxc.vmid} -- ${(lxc.name || '').replace(/[^a-zA-Z0-9-_]/g, '_')}.md`;
-        const filePath = path.join(vaultRoot, fileName);
+        const filePath = path.join(lxcFolder, fileName);
         await fs.writeFile(filePath, noteContent, 'utf8');
         console.log(`Created note: ${filePath}`);
       }
