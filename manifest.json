@@ -3,7 +3,7 @@
 	"name": "Proxmox Notes",
 	"version": "0.2.0",
 	"minAppVersion": "0.15.0",
-	"description": "Integrate Proxmox VM and container notes within Obsidian",
+	"description": "Integrate Proxmox VM and CT notes within Obsidian",
 	"author": "willjasen",
 	"authorUrl": "https://github.com/willjasen",
 	"isDesktopOnly": true
