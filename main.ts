@@ -1,5 +1,5 @@
 // src/main.ts
-import { Plugin, Notice } from 'obsidian';
+import { Plugin, Notice, FileSystemAdapter } from 'obsidian';
 import { ProxmoxSettingTab, DEFAULT_SETTINGS, ProxmoxPluginSettings } from './settings';
 import { ProxmoxView, VIEW_TYPE_PROXMOX } from './src/view';
 import { ProxmoxClient } from './src/ProxmoxClient';
@@ -26,7 +26,14 @@ export default class ProxmoxPlugin extends Plugin {
     this.proxmoxClient = new ProxmoxClient(this.settings.baseUrl, this.settings.apiToken);
 
     // Automatically generate notes for VMs and LXCs on startup
-    const vaultRoot = (this.app.vault.adapter as any).getBasePath();
+    const adapter = this.app.vault.adapter;
+    let vaultRoot: string;
+    if (adapter instanceof FileSystemAdapter) {
+      vaultRoot = adapter.getBasePath();
+    } else {
+      new Notice('Vault adapter is not a FileSystemAdapter. Cannot determine base path.');
+      return;
+    }
     let notesDir = this.settings.notesDirectory?.trim() || '';
     let targetDir = notesDir ? require('path').join(vaultRoot, notesDir) : vaultRoot;
     new Notice('Generating Proxmox VM and LXC notes...');
@@ -44,7 +51,14 @@ export default class ProxmoxPlugin extends Plugin {
       id: 'generate-proxmox-vm-notes',
       name: 'Generate Proxmox VM Notes',
       callback: async () => {
-        const vaultRoot = (this.app.vault.adapter as any).getBasePath();
+        const adapter = this.app.vault.adapter;
+        let vaultRoot: string;
+        if (adapter instanceof FileSystemAdapter) {
+          vaultRoot = adapter.getBasePath();
+        } else {
+          new Notice('Vault adapter is not a FileSystemAdapter. Cannot determine base path.');
+          return;
+        }
         let notesDir = this.settings.notesDirectory?.trim() || '';
         let targetDir = notesDir ? require('path').join(vaultRoot, notesDir) : vaultRoot;
         new Notice('Generating Proxmox VM notes...');
