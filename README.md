@@ -5,7 +5,7 @@ Integrate Proxmox VM and container notes within [Obsidian](https://obsidian.md).
 ---
 
 ## Features
-- Automatically creates or updates notes for each VM and LXC in your Proxmox cluster
+- Create a one-way sync of notes from Proxmox VMs and containers into notes in Obsidian
 
 ## Installation
 1. **Clone or download this repository.**
