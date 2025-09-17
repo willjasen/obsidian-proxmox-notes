@@ -47,6 +47,19 @@ GPLv3
 
 ---
 
+## In Obsidian
+
+Here are two screenshots of the plugin in action.
+
+This is the folder structure of notes, with a custom vault path.
+
+<img width="498" height="328" alt="Screenshot 2025-09-16 at 8 17 37 PM" src="https://github.com/user-attachments/assets/53ca29c9-20cc-4a60-8b8b-3abc0fd442f3" />
+
+Here is a note, in which the note's contents are the same Markdown note for an example VM.
+<img width="1760" height="1230" alt="Screenshot 2025-09-16 at 8 17 51 PM" src="https://github.com/user-attachments/assets/1ef96881-e33d-483a-a27d-5f502c72f1c3" />
+
+---
+
 ## Troubleshooting
 - Make sure your API token has sufficient permissions in Proxmox.
 - Check the Obsidian console for error messages if notes are not generated.
