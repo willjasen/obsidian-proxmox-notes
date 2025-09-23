@@ -38,9 +38,10 @@ export default class ProxmoxPlugin extends Plugin {
     let targetDir = notesDir ? require('path').join(vaultRoot, notesDir) : vaultRoot;
     new Notice('Generating Proxmox VM and LXC notes...');
     try {
-      await this.proxmoxClient.createNotesForVMs(targetDir);
-      await this.proxmoxClient.createNotesForLXCs(targetDir);
-      new Notice('Proxmox VM and LXC notes created!');
+      const vmCount = await this.proxmoxClient.createNotesForVMs(targetDir);
+      const lxcCount = await this.proxmoxClient.createNotesForLXCs(targetDir);
+      new Notice(`Proxmox VM notes created/updated: ${vmCount}`);
+      new Notice(`Proxmox LXC notes created/updated: ${lxcCount}`);
     } catch (err) {
       console.error('Failed to create Proxmox notes:', err);
       new Notice('Failed to create Proxmox notes. See console for details.');
@@ -63,8 +64,8 @@ export default class ProxmoxPlugin extends Plugin {
         let targetDir = notesDir ? require('path').join(vaultRoot, notesDir) : vaultRoot;
         new Notice('Generating Proxmox VM notes...');
         try {
-          await this.proxmoxClient.createNotesForVMs(targetDir);
-          new Notice('Proxmox VM notes created!');
+          const vmCount = await this.proxmoxClient.createNotesForVMs(targetDir);
+          new Notice(`Proxmox VM notes created/updated: ${vmCount}.`);
         } catch (err) {
           console.error('Failed to create Proxmox VM notes:', err);
           new Notice('Failed to create Proxmox VM notes. See console for details.');

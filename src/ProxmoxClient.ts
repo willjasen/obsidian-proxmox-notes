@@ -114,31 +114,27 @@ export class ProxmoxClient {
     });
   }
 
-  async createNotesForVMs(vaultRoot: string): Promise<void> {
+  async createNotesForVMs(vaultRoot: string): Promise<number> {
     // console.log('Starting createNotesForVMs...');
+    let notesWritten = 0;
     try {
       const vms = await this.getVMs();
-      // console.log(`Found ${vms.length} VMs.`);
       const vmsFolder = path.join(vaultRoot, 'VMs');
       await fs.mkdir(vmsFolder, { recursive: true });
       for (const vm of vms) {
-        if (vm.type !== 'qemu') continue; // Only process VMs
-        // console.log(`Creating note for VMID: ${vm.vmid}, Name: ${vm.name || ''}`);
+        if (vm.type !== 'qemu') continue;
         let proxmoxNote = '';
         if (vm.node && vm.vmid) {
           proxmoxNote = await this.getProxmoxVMNotes(vm.node, vm.vmid);
         }
-
-        // Handle YAML front matter
-  let frontMatter = `---\nProxmox ID: ${vm.vmid}\nProxmox Type: VM\n---`;
+        let frontMatter = `---\nProxmox ID: ${vm.vmid}\nProxmox Type: VM\n---`;
         let content = proxmoxNote;
         const frontMatterRegex = /^---\n([\s\S]*?)\n---\n?/;
         const match = proxmoxNote.match(frontMatterRegex);
         if (match) {
-          // Existing front matter: update or add Proxmox ID and Type at the end
           let fm = match[1]
             .split(/\r?\n/)
-            .filter(line => !/^Proxmox ID:/m.test(line) && !/^Proxmox Type:/m.test(line)) // Remove any existing Proxmox ID and Type
+            .filter(line => !/^Proxmox ID:/m.test(line) && !/^Proxmox Type:/m.test(line))
             .join('\n');
           if (fm.trim().length > 0) {
             fm += `\nProxmox ID: ${vm.vmid}\nProxmox Type: VM`;
@@ -154,11 +150,9 @@ export class ProxmoxClient {
         let shouldWrite = true;
         try {
           const existingContent = await fs.readFile(filePath, 'utf8');
-          // Remove frontmatter from both existing and new content before comparing
           const existingBody = this.stripFrontMatter(existingContent);
           const newBody = this.stripFrontMatter(noteContent);
           if (this.normalizeNoteContent(existingBody) === this.normalizeNoteContent(newBody)) {
-            // Check if frontmatter is missing Proxmox ID or Type
             const fmRegex = /^---\n([\s\S]*?)\n---/;
             const fmMatch = existingContent.match(fmRegex);
             let needsUpdate = false;
@@ -172,42 +166,38 @@ export class ProxmoxClient {
             }
             if (needsUpdate) {
               shouldWrite = true;
-              // console.log(`Updating frontmatter for note: ${filePath}`);
             } else {
               shouldWrite = false;
-              // console.log(`No changes for note: ${filePath}`);
             }
           }
         } catch (err) {
-          // File does not exist, so we should write it
           shouldWrite = true;
         }
         if (shouldWrite) {
           await fs.writeFile(filePath, noteContent, 'utf8');
-          // console.log(`Created/Updated note: ${filePath}`);
+          notesWritten++;
         }
       }
-      // console.log('All VM notes created.');
     } catch (err) {
       console.error('Error creating VM notes:', err);
     }
+    return notesWritten;
   }
 
-  async createNotesForLXCs(vaultRoot: string): Promise<void> {
+  async createNotesForLXCs(vaultRoot: string): Promise<number> {
     // console.log('Starting createNotesForLXCs...');
+    let notesWritten = 0;
     try {
       const lxcs = await this.getVMs();
       const lxcFolder = path.join(vaultRoot, 'CTs');
       await fs.mkdir(lxcFolder, { recursive: true });
       for (const lxc of lxcs) {
-        if (lxc.type !== 'lxc') continue; // Only process LXCs
-        // // console.log(`Creating note for LXC ID: ${lxc.vmid}, Name: ${lxc.name || ''}`);
+        if (lxc.type !== 'lxc') continue;
         let proxmoxNote = '';
         if (lxc.node && lxc.vmid) {
           proxmoxNote = await this.getProxmoxLXCNotes(lxc.node, lxc.vmid);
         }
-        // Handle YAML front matter
-  let frontMatter = `---\nProxmox ID: ${lxc.vmid}\nProxmox Type: CT\n---`;
+        let frontMatter = `---\nProxmox ID: ${lxc.vmid}\nProxmox Type: CT\n---`;
         let content = proxmoxNote;
         const frontMatterRegex = /^---\n([\s\S]*?)\n---\n?/;
         const match = proxmoxNote.match(frontMatterRegex);
@@ -230,11 +220,9 @@ export class ProxmoxClient {
         let shouldWrite = true;
         try {
           const existingContent = await fs.readFile(filePath, 'utf8');
-          // Remove frontmatter from both existing and new content before comparing
           const existingBody = this.stripFrontMatter(existingContent);
           const newBody = this.stripFrontMatter(noteContent);
           if (this.normalizeNoteContent(existingBody) === this.normalizeNoteContent(newBody)) {
-            // Check if frontmatter is missing Proxmox ID or Type
             const fmRegex = /^---\n([\s\S]*?)\n---/;
             const fmMatch = existingContent.match(fmRegex);
             let needsUpdate = false;
@@ -248,25 +236,22 @@ export class ProxmoxClient {
             }
             if (needsUpdate) {
               shouldWrite = true;
-              // console.log(`Updating frontmatter for note: ${filePath}`);
             } else {
               shouldWrite = false;
-              // console.log(`No changes for note: ${filePath}`);
             }
           }
         } catch (err) {
-          // File does not exist, so we should write it
           shouldWrite = true;
         }
         if (shouldWrite) {
           await fs.writeFile(filePath, noteContent, 'utf8');
-          // console.log(`Created/Updated note: ${filePath}`);
+          notesWritten++;
         }
       }
-      // console.log('All LXC notes created.');
     } catch (err) {
       console.error('Error creating LXC notes:', err);
     }
+    return notesWritten;
   }
 
   // Fetch the Proxmox 'notes' (description) for a given LXC
