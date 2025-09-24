@@ -89,11 +89,45 @@ export class ProxmoxClient {
         req.on('error', () => resolve(''));
         req.end();
       });
-      const frontMatter = `---\nProxmox Type: Datacenter\n---`;
-      const noteContent = `${frontMatter}\n\n${description}`.trim();
       const filePath = path.join(vaultRoot, 'Proxmox Datacenter.md');
-      await fs.writeFile(filePath, noteContent, 'utf8');
-      return true;
+      let shouldWrite = true;
+      let newFrontMatter = '';
+      let noteContent = '';
+      try {
+        const existingContent = await fs.readFile(filePath, 'utf8');
+        // Extract frontmatter and body
+        const fmRegex = /^---\n([\s\S]*?)\n---\n?/;
+        const fmMatch = existingContent.match(fmRegex);
+        let fm = fmMatch ? fmMatch[1] : '';
+        let body = existingContent.replace(fmRegex, '').trimStart();
+        // Update or insert Proxmox Type field
+        let fmLines = fm.split(/\r?\n/).filter(line => line.trim() !== '');
+        let foundType = false;
+        fmLines = fmLines.map(line => {
+          if (/^Proxmox Type:/m.test(line)) {
+            foundType = true;
+            return 'Proxmox Type: Datacenter';
+          }
+          return line;
+        });
+        if (!foundType) fmLines.push('Proxmox Type: Datacenter');
+        newFrontMatter = `---\n${fmLines.join('\n')}\n---`;
+        // Only update body if changed
+        if (this.normalizeNoteContent(body) === this.normalizeNoteContent(description)) {
+          shouldWrite = false;
+        }
+        noteContent = `${newFrontMatter}\n\n${description}`.trim();
+      } catch (err) {
+        // File doesn't exist, create new
+        newFrontMatter = `---\nProxmox Type: Datacenter\n---`;
+        noteContent = `${newFrontMatter}\n\n${description}`.trim();
+        shouldWrite = true;
+      }
+      if (shouldWrite) {
+        await fs.writeFile(filePath, noteContent, 'utf8');
+        return true;
+      }
+      return false;
     } catch (err) {
       console.error('Error creating datacenter note:', err);
       return false;
@@ -142,6 +176,7 @@ export class ProxmoxClient {
       const hostsFolder = path.join(vaultRoot, 'Hosts');
       await fs.mkdir(hostsFolder, { recursive: true });
       for (const host of hosts) {
+        if (host.status !== 'online') continue; // Only update notes for online hosts
         // Fetch host note from /nodes/{node}/config
         const url = `${this.baseUrl}/api2/json/nodes/${host.node}/config`;
         const description = await new Promise<string>((resolve) => {
@@ -167,12 +202,50 @@ export class ProxmoxClient {
           req.on('error', () => resolve(''));
           req.end();
         });
-        const frontMatter = `---\nProxmox Type: Host\nProxmox Node: ${host.node}\n---`;
-        const noteContent = `${frontMatter}\n\n${description}`.trim();
         const fileName = `Host ${host.node}.md`;
         const filePath = path.join(hostsFolder, fileName);
-        await fs.writeFile(filePath, noteContent, 'utf8');
-        notesWritten++;
+        let shouldWrite = true;
+        let newFrontMatter = '';
+        let noteContent = '';
+        try {
+          const existingContent = await fs.readFile(filePath, 'utf8');
+          // Extract frontmatter and body
+          const fmRegex = /^---\n([\s\S]*?)\n---\n?/;
+          const fmMatch = existingContent.match(fmRegex);
+          let fm = fmMatch ? fmMatch[1] : '';
+          let body = existingContent.replace(fmRegex, '').trimStart();
+          // Update or insert Proxmox Type and Node fields
+          let fmLines = fm.split(/\r?\n/).filter(line => line.trim() !== '');
+          let foundType = false, foundNode = false;
+          fmLines = fmLines.map(line => {
+            if (/^Proxmox Type:/m.test(line)) {
+              foundType = true;
+              return 'Proxmox Type: Host';
+            }
+            if (/^Proxmox Node:/m.test(line)) {
+              foundNode = true;
+              return `Proxmox Node: ${host.node}`;
+            }
+            return line;
+          });
+          if (!foundType) fmLines.push('Proxmox Type: Host');
+          if (!foundNode) fmLines.push(`Proxmox Node: ${host.node}`);
+          newFrontMatter = `---\n${fmLines.join('\n')}\n---`;
+          // Only update body if changed
+          if (this.normalizeNoteContent(body) === this.normalizeNoteContent(description)) {
+            shouldWrite = false;
+          }
+          noteContent = `${newFrontMatter}\n\n${description}`.trim();
+        } catch (err) {
+          // File doesn't exist, create new
+          newFrontMatter = `---\nProxmox Type: Host\nProxmox Node: ${host.node}\n---`;
+          noteContent = `${newFrontMatter}\n\n${description}`.trim();
+          shouldWrite = true;
+        }
+        if (shouldWrite) {
+          await fs.writeFile(filePath, noteContent, 'utf8');
+          notesWritten++;
+        }
       }
     } catch (err) {
       console.error('Error creating host notes:', err);
