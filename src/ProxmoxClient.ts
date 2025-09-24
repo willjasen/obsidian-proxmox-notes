@@ -27,6 +27,159 @@ export class ProxmoxClient {
     this.apiToken = apiToken;
   }
 
+  // Fetch datacenter info (summary)
+  async getDatacenterInfo(): Promise<any> {
+    const url = `${this.baseUrl}/api2/json/cluster/status`;
+    return new Promise((resolve, reject) => {
+      const options = {
+        method: 'GET',
+        headers: {
+          'Authorization': `PVEAPIToken=${this.apiToken}`,
+          'Accept': 'application/json',
+        },
+      };
+      const req = https.request(url, options, (res: IncomingMessage) => {
+        let data = '';
+        res.on('data', (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              const parsedData = JSON.parse(data);
+              resolve(parsedData.data || {});
+            } catch (error) {
+              resolve({});
+            }
+          } else {
+            resolve({});
+          }
+        });
+      });
+      req.on('error', () => resolve({}));
+      req.end();
+    });
+  }
+
+  // Create a note for the datacenter
+  async createNoteForDatacenter(vaultRoot: string): Promise<boolean> {
+    try {
+      // Fetch datacenter note from /cluster/options
+      const url = `${this.baseUrl}/api2/json/cluster/options`;
+      const description = await new Promise<string>((resolve) => {
+        const options = {
+          method: 'GET',
+          headers: {
+            'Authorization': `PVEAPIToken=${this.apiToken}`,
+            'Accept': 'application/json',
+          },
+        };
+        const req = https.request(url, options, (res: IncomingMessage) => {
+          let data = '';
+          res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+          res.on('end', () => {
+            try {
+              const parsedData = JSON.parse(data);
+              resolve(parsedData.data?.description || '');
+            } catch {
+              resolve('');
+            }
+          });
+        });
+        req.on('error', () => resolve(''));
+        req.end();
+      });
+      const frontMatter = `---\nProxmox Type: Datacenter\n---`;
+      const noteContent = `${frontMatter}\n\n${description}`.trim();
+      const filePath = path.join(vaultRoot, 'Proxmox Datacenter.md');
+      await fs.writeFile(filePath, noteContent, 'utf8');
+      return true;
+    } catch (err) {
+      console.error('Error creating datacenter note:', err);
+      return false;
+    }
+  }
+
+  // Fetch all hosts (nodes)
+  async getHosts(): Promise<any[]> {
+    const url = `${this.baseUrl}/api2/json/nodes`;
+    return new Promise((resolve, reject) => {
+      const options = {
+        method: 'GET',
+        headers: {
+          'Authorization': `PVEAPIToken=${this.apiToken}`,
+          'Accept': 'application/json',
+        },
+      };
+      const req = https.request(url, options, (res: IncomingMessage) => {
+        let data = '';
+        res.on('data', (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              const parsedData = JSON.parse(data);
+              resolve(parsedData.data || []);
+            } catch (error) {
+              resolve([]);
+            }
+          } else {
+            resolve([]);
+          }
+        });
+      });
+      req.on('error', () => resolve([]));
+      req.end();
+    });
+  }
+
+  // Create notes for all hosts
+  async createNotesForHosts(vaultRoot: string): Promise<number> {
+    let notesWritten = 0;
+    try {
+      const hosts = await this.getHosts();
+      const hostsFolder = path.join(vaultRoot, 'Hosts');
+      await fs.mkdir(hostsFolder, { recursive: true });
+      for (const host of hosts) {
+        // Fetch host note from /nodes/{node}/config
+        const url = `${this.baseUrl}/api2/json/nodes/${host.node}/config`;
+        const description = await new Promise<string>((resolve) => {
+          const options = {
+            method: 'GET',
+            headers: {
+              'Authorization': `PVEAPIToken=${this.apiToken}`,
+              'Accept': 'application/json',
+            },
+          };
+          const req = https.request(url, options, (res: IncomingMessage) => {
+            let data = '';
+            res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+            res.on('end', () => {
+              try {
+                const parsedData = JSON.parse(data);
+                resolve(parsedData.data?.description || '');
+              } catch {
+                resolve('');
+              }
+            });
+          });
+          req.on('error', () => resolve(''));
+          req.end();
+        });
+        const frontMatter = `---\nProxmox Type: Host\nProxmox Node: ${host.node}\n---`;
+        const noteContent = `${frontMatter}\n\n${description}`.trim();
+        const fileName = `Host ${host.node}.md`;
+        const filePath = path.join(hostsFolder, fileName);
+        await fs.writeFile(filePath, noteContent, 'utf8');
+        notesWritten++;
+      }
+    } catch (err) {
+      console.error('Error creating host notes:', err);
+    }
+    return notesWritten;
+  }
+
   async getVMs(): Promise<any[]> {
     const url = `${this.baseUrl}/api2/json/cluster/resources?type=vm`;
 
