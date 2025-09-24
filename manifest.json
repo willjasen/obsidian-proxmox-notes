@@ -1,7 +1,7 @@
 {
 	"id": "proxmox-notes",
 	"name": "Proxmox Notes",
-	"version": "0.2.3",
+	"version": "0.3.0",
 	"minAppVersion": "0.15.0",
 	"description": "Integrate Proxmox VM and CT notes within Obsidian",
 	"author": "willjasen",
